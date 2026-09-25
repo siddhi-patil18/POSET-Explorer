@@ -54,3 +54,10 @@ POSET-Explorer/
 ├── examples.py
 ├── requirements.txt
 └── README.md
+
+## 📸 Screenshots
+![Main Interface](main.png)
+
+![Relation Analysis](hasse.png)
+
+![Analaysis](step.png)
