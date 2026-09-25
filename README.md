@@ -1,15 +1,56 @@
-# Interactive Hasse Diagram Builder & POSET Property Checker
+# POSET Explorer
 
-A beginner-friendly Python and Streamlit application for checking whether a
-finite relation is a partially ordered set (POSET) and drawing its Hasse
-diagram.
+### Explore Relations • Discover POSETs • Visualize Order
 
-The project keeps the user interface, input parsing, mathematical checks,
-diagram generation, and examples in separate modules.
+POSET Explorer is an interactive Discrete Mathematics application that helps users create and analyze relations and understand Partially Ordered Sets (POSETs) through Hasse diagrams.
 
-## Features
+## 📌 About the Project
 
-- Accepts finite sets such as `1,2,3,6`, `{1,2,3,6}`, or `a,b,c`.
-- Accepts relation pairs such as `(1,1),(1,2),(2,2)`. **…**
+This project provides an easy and interactive way to work with relations on finite sets.
 
-_This response is too long to display in full._
+The application can:
+- Create relations using different methods
+- Check important POSET properties
+- Determine whether a relation is a POSET
+- Generate Hasse diagrams for POSETs
+- Show step-by-step analysis of relation properties
+
+## ✨ Features
+
+- Enter a custom finite set
+- Create custom relations using ordered pairs
+- Generate relations using mathematical conditions
+- Built-in relations:
+  - Less than or equal to (≤)
+  - Greater than or equal to (≥)
+  - Divisibility
+  - Identity
+- Check:
+  - Reflexive property
+  - Antisymmetric property
+  - Transitive property
+- Automatically identify POSETs
+- Generate Hasse diagrams
+- Display cover relations
+- Step-by-step property analysis
+
+## 🛠️ Technologies Used
+
+- Python
+- Streamlit
+- NetworkX
+- Matplotlib
+- Python AST
+
+## 📂 Project Structure
+
+POSET-Explorer/
+│
+├── app.py
+├── parser.py
+├── poset_checker.py
+├── hasse_diagram.py
+├── relation_generators.py
+├── examples.py
+├── requirements.txt
+└── README.md
