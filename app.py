@@ -32,7 +32,14 @@ st.set_page_config(
 )
 
 
-# Title
+# ---------------- CLEAR STATE ----------------
+
+if "clear_count" not in st.session_state:
+    st.session_state.clear_count = 0
+
+
+# ---------------- TITLE ----------------
+
 st.markdown(
     "<h3 style='text-align:center;'>∈ ⊆ ≤ ∀ ∃ ∑</h3>",
     unsafe_allow_html=True
@@ -58,7 +65,7 @@ st.header("1. Enter Your Set")
 set_input = st.text_input(
     "Enter set elements",
     placeholder="Example: 1,2,3,4",
-    key="set_input"
+    key=f"set_input_{st.session_state.clear_count}"
 )
 
 
@@ -84,7 +91,8 @@ relation_input = ""
 condition = ""
 
 
-# Custom relation
+# ---------------- CUSTOM RELATION ----------------
+
 if relation_type == "Custom Relation":
 
     custom_type = st.radio(
@@ -101,7 +109,7 @@ if relation_type == "Custom Relation":
         relation_input = st.text_area(
             "Enter relation pairs",
             placeholder="Example: (1,1),(1,2),(2,2)",
-            key="relation_input"
+            key=f"relation_input_{st.session_state.clear_count}"
         )
 
     else:
@@ -109,7 +117,7 @@ if relation_type == "Custom Relation":
         condition = st.text_input(
             "Enter condition",
             placeholder="Example: a + b < 10",
-            key="condition"
+            key=f"condition_{st.session_state.clear_count}"
         )
 
         st.caption(
@@ -138,9 +146,7 @@ with col2:
 # ---------------- CLEAR ----------------
 
 if clear:
-    st.session_state["set_input"] = ""
-    st.session_state["relation_input"] = ""
-    st.session_state["condition"] = ""
+    st.session_state.clear_count += 1
     st.rerun()
 
 
