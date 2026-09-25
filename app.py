@@ -50,13 +50,15 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+
 # ---------------- SET ----------------
 
 st.header("1. Enter Your Set")
 
 set_input = st.text_input(
     "Enter set elements",
-    placeholder="Example: 1,2,3,4"
+    placeholder="Example: 1,2,3,4",
+    key="set_input"
 )
 
 
@@ -98,14 +100,16 @@ if relation_type == "Custom Relation":
 
         relation_input = st.text_area(
             "Enter relation pairs",
-            placeholder="Example: (1,1),(1,2),(2,2)"
+            placeholder="Example: (1,1),(1,2),(2,2)",
+            key="relation_input"
         )
 
     else:
 
         condition = st.text_input(
             "Enter condition",
-            placeholder="Example: a + b < 10"
+            placeholder="Example: a + b < 10",
+            key="condition"
         )
 
         st.caption(
@@ -134,6 +138,9 @@ with col2:
 # ---------------- CLEAR ----------------
 
 if clear:
+    st.session_state["set_input"] = ""
+    st.session_state["relation_input"] = ""
+    st.session_state["condition"] = ""
     st.rerun()
 
 
