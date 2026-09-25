@@ -72,7 +72,7 @@ def calculate_hasse_positions(graph):
 def draw_hasse_diagram(graph):
     positions = calculate_hasse_positions(graph)
 
-    figure, axis = plt.subplots(figsize=(5, 3))
+    figure, axis = plt.subplots(figsize=(5, 4))
 
     nx.draw_networkx_nodes(
         graph,
