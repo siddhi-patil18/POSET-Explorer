@@ -64,7 +64,7 @@ def calculate_hasse_positions(graph):
         center = (len(nodes) - 1) / 2
 
         for i, node in enumerate(nodes):
-            positions[node] = (i - center, rank)
+            positions[node] = (i - center, rank*0.6)
 
     return positions
 
@@ -72,14 +72,14 @@ def calculate_hasse_positions(graph):
 def draw_hasse_diagram(graph):
     positions = calculate_hasse_positions(graph)
 
-    figure, axis = plt.subplots(figsize=(5, 4))
+    figure, axis = plt.subplots(figsize=(4, 3))
 
     nx.draw_networkx_nodes(
         graph,
         positions,
         node_color="#E8F1FA",
         edgecolors="#24527A",
-        node_size=1200,
+        node_size=800,
         ax=axis,
     )
 
