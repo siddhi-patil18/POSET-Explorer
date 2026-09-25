@@ -1,283 +1,128 @@
-"""Input parsing and validation for finite sets and relations."""
-
-from __future__ import annotations
-
 import ast
 import re
-from typing import Any, Iterable
 
 
 class InputError(ValueError):
-    """Raised when a set or relation input is invalid."""
+    pass
 
 
-def format_value(value: Any) -> str:
-    """Return a readable value for messages and diagram labels."""
-
-    if isinstance(value, str):
-        return value
-
-    return repr(value)
+def format_value(value):
+    return value if isinstance(value, str) else repr(value)
 
 
-def format_pair(left: Any, right: Any) -> str:
-    """Return an ordered pair in the notation used by the application."""
-
-    return f"({format_value(left)}, {format_value(right)})"
+def format_pair(a, b):
+    return f"({format_value(a)}, {format_value(b)})"
 
 
-def _split_top_level(text: str) -> list[str]:
-    """Split comma-separated text without splitting nested values or quotes."""
-
-    parts: list[str] = []
-    current: list[str] = []
+def _split(text):
+    parts = []
+    current = ""
     depth = 0
-    quote: str | None = None
-    escaped = False
+    quote = None
 
-    for character in text:
-        if quote is not None:
-            current.append(character)
-
-            if escaped:
-                escaped = False
-            elif character == "\\":
-                escaped = True
-            elif character == quote:
+    for ch in text:
+        if quote:
+            current += ch
+            if ch == quote:
                 quote = None
-
-            continue
-
-        if character in {"'", '"'}:
-            quote = character
-            current.append(character)
-
-        elif character in "([{":
+        elif ch in "'\"":
+            quote = ch
+            current += ch
+        elif ch in "([{":
             depth += 1
-            current.append(character)
-
-        elif character in ")]}":
+            current += ch
+        elif ch in ")]}":
             depth -= 1
-
-            if depth < 0:
-                raise InputError(
-                    "An input value has unbalanced brackets."
-                )
-
-            current.append(character)
-
-        elif character == "," and depth == 0:
-            parts.append("".join(current).strip())
-            current = []
-
+            current += ch
+        elif ch == "," and depth == 0:
+            parts.append(current.strip())
+            current = ""
         else:
-            current.append(character)
+            current += ch
 
-    if quote is not None:
-        raise InputError(
-            "An input value has an unfinished quote."
-        )
-
-    if depth != 0:
-        raise InputError(
-            "An input value has unbalanced brackets."
-        )
-
-    final_part = "".join(current).strip()
-
-    if final_part:
-        parts.append(final_part)
+    if current.strip():
+        parts.append(current.strip())
 
     return parts
 
 
-def _parse_atom(text: str) -> Any:
-    """Parse a number, boolean, quoted string, or simple unquoted name."""
+def _parse(text):
+    text = text.strip()
 
-    token = text.strip()
-
-    if not token:
-        raise InputError(
-            "A set or relation contains an empty value."
-        )
-
-    try:
-        value = ast.literal_eval(token)
-    except (ValueError, SyntaxError):
-        # Supports inputs such as a,b,c.
-        value = token
-
-    try:
-        hash(value)
-    except TypeError as error:
-        raise InputError(
-            f"{token!r} is not a simple hashable value."
-        ) from error
-
-    return value
-
-
-def _try_parse_collection(text: str) -> list[Any] | None:
-    """Parse a Python-like collection when the entire input is one."""
+    if not text:
+        raise InputError("Empty value is not allowed.")
 
     try:
         value = ast.literal_eval(text)
     except (ValueError, SyntaxError):
-        return None
+        value = text
 
-    if not isinstance(value, (set, list, tuple)):
-        return None
+    try:
+        hash(value)
+    except TypeError:
+        raise InputError("Only simple values are allowed.")
 
-    values = list(value)
+    return value
 
-    for item in values:
-        try:
-            hash(item)
-        except TypeError as error:
-            raise InputError(
-                "Every set element must be a simple value."
-            ) from error
+
+def parse_set_input(text):
+    text = text.strip()
+
+    if not text:
+        raise InputError("Please enter at least one set element.")
+
+    try:
+        values = list(ast.literal_eval(text))
+    except (ValueError, SyntaxError, TypeError):
+        if text[0] in "{[(" and text[-1] in "}])":
+            text = text[1:-1]
+        values = [_parse(x) for x in _split(text)]
+
+    if not values:
+        raise InputError("Please enter at least one set element.")
+
+    if len(values) != len(set(values)):
+        raise InputError("Set elements must be unique.")
 
     return values
 
 
-def parse_set_input(text: str) -> list[Any]:
-    """Parse 1,2,3 or {1,2,3} into unique values."""
+def parse_relation_input(text):
+    text = text.strip()
 
-    cleaned = text.strip()
-
-    if not cleaned:
-        raise InputError(
-            "Please enter at least one set element."
-        )
-
-    values = _try_parse_collection(cleaned)
-
-    if values is None:
-        without_outer_brackets = cleaned
-
-        if (
-            len(without_outer_brackets) >= 2
-            and without_outer_brackets[0] in "{[("
-            and without_outer_brackets[-1] in "}])"
-        ):
-            without_outer_brackets = without_outer_brackets[1:-1].strip()
-
-        values = [
-            _parse_atom(part)
-            for part in _split_top_level(without_outer_brackets)
-        ]
-
-    if not values:
-        raise InputError(
-            "Please enter at least one set element."
-        )
-
-    unique_values: list[Any] = []
-
-    for value in values:
-        if value not in unique_values:
-            unique_values.append(value)
-
-    if len(unique_values) != len(values):
-        raise InputError(
-            "The set contains a duplicate element. "
-            "A set must have unique elements."
-        )
-
-    return unique_values
-
-
-def _parse_pair(pair_text: str) -> tuple[Any, Any]:
-    """Parse the two values inside one relation pair."""
-
-    parts = _split_top_level(pair_text)
-
-    if len(parts) != 2:
-        raise InputError(
-            "Each relation pair needs exactly two values, "
-            f"but {pair_text!r} was found."
-        )
-
-    return _parse_atom(parts[0]), _parse_atom(parts[1])
-
-
-def parse_relation_input(text: str) -> set[tuple[Any, Any]]:
-    """Parse (1,1),(1,2) into a set of ordered pairs."""
-
-    cleaned = text.strip()
-
-    if not cleaned:
+    if not text:
         return set()
 
-    pair_matches = re.findall(
-        r"\(([^()]*)\)",
-        cleaned,
-    )
+    pairs = re.findall(r"\(([^()]*)\)", text)
 
-    if not pair_matches:
+    if not pairs:
         raise InputError(
-            "Use relation pairs like (1,1),(1,2),(2,2). "
-            "Quoted strings are also supported, for example ('a','b')."
+            "Use pairs like (1,1),(1,2),(2,2)."
         )
 
-    leftover = re.sub(
-        r"\([^()]*\)",
-        "",
-        cleaned,
-    )
+    relation = set()
 
-    leftover = (
-        leftover
-        .replace("[", "")
-        .replace("]", "")
-        .replace(",", "")
-        .strip()
-    )
+    for pair in pairs:
+        values = _split(pair)
 
-    if leftover:
-        raise InputError(
-            f"Could not understand this relation text: {leftover!r}."
+        if len(values) != 2:
+            raise InputError("Each pair must contain two values.")
+
+        relation.add(
+            (_parse(values[0]), _parse(values[1]))
         )
 
-    parsed_pairs = [
-        _parse_pair(pair_match)
-        for pair_match in pair_matches
-    ]
-
-    relation = set(parsed_pairs)
-
-    if len(relation) != len(parsed_pairs):
-        raise InputError(
-            "The relation contains a duplicate pair. "
-            "Each ordered pair should be entered only once."
-        )
+    if len(relation) != len(pairs):
+        raise InputError("Duplicate relation pair found.")
 
     return relation
 
 
-def validate_relation(
-    elements: Iterable[Any],
-    relation: set[tuple[Any, Any]],
-) -> None:
-    """Ensure every relation pair uses values from the entered set."""
+def validate_relation(elements, relation):
+    elements = set(elements)
 
-    element_set = set(elements)
-
-    outside_pairs = [
-        pair
-        for pair in relation
-        if pair[0] not in element_set
-        or pair[1] not in element_set
-    ]
-
-    if outside_pairs:
-        examples = ", ".join(
-            format_pair(*pair)
-            for pair in outside_pairs[:3]
-        )
-
-        raise InputError(
-            f"Relation pair(s) {examples} use values "
-            "that are not in the set."
-        )
+    for a, b in relation:
+        if a not in elements or b not in elements:
+            raise InputError(
+                f"{format_pair(a, b)} is not in the entered set."
+            )

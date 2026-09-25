@@ -1,12 +1,6 @@
-"""Generalized POSET property checks with mathematical explanations."""
-
-from __future__ import annotations
-
 from dataclasses import dataclass, field
-from typing import Any
 
 from parser import (
-    InputError,
     format_pair,
     format_value,
     validate_relation,
@@ -15,8 +9,6 @@ from parser import (
 
 @dataclass
 class PropertyResult:
-    """Result, working details, and violations for one property."""
-
     name: str
     passed: bool
     details: list[str]
@@ -26,220 +18,110 @@ class PropertyResult:
 
 @dataclass
 class AnalysisResult:
-    """Complete analysis of a finite set and user-defined relation."""
-
-    elements: list[Any]
-    relation: set[tuple[Any, Any]]
-    properties: list[PropertyResult]
+    elements: list
+    relation: set
+    properties: list
 
     @property
-    def is_poset(self) -> bool:
-        """Return true exactly when all three POSET properties pass."""
-
-        return all(
-            property_result.passed
-            for property_result in self.properties
-        )
+    def is_poset(self):
+        return all(p.passed for p in self.properties)
 
 
-def _summarize(
-    items: list[str],
-    limit: int = 8,
-) -> str:
-    """Keep failure messages readable for large relations."""
+def check_reflexive(elements, relation):
+    details = []
+    missing = []
 
-    if len(items) <= limit:
-        return "; ".join(items)
+    for a in elements:
+        pair = format_pair(a, a)
 
-    remaining = len(items) - limit
-
-    return (
-        f"{'; '.join(items[:limit])}; "
-        f"and {remaining} more"
-    )
-
-
-def check_reflexive(
-    elements: list[Any],
-    relation: set[tuple[Any, Any]],
-) -> PropertyResult:
-    """Check whether every element a has the pair (a,a)."""
-
-    details: list[str] = []
-    missing_pairs: list[str] = []
-
-    for element in elements:
-        pair_text = format_pair(element, element)
-
-        if (element, element) in relation:
-            details.append(
-                f"{pair_text} is present in R."
-            )
+        if (a, a) in relation:
+            details.append(f"{pair} is present.")
         else:
-            details.append(
-                f"{pair_text} is missing from R."
-            )
-            missing_pairs.append(pair_text)
-
-    if missing_pairs:
-        return PropertyResult(
-            name="Reflexive",
-            passed=False,
-            details=details,
-            failure_reason=(
-                "Missing required self-pair(s): "
-                f"{_summarize(missing_pairs)}."
-            ),
-            violations=missing_pairs,
-        )
+            details.append(f"{pair} is missing.")
+            missing.append(pair)
 
     return PropertyResult(
-        name="Reflexive",
-        passed=True,
-        details=details,
+        "Reflexive",
+        not missing,
+        details,
+        f"Missing self-pair(s): {', '.join(missing)}." if missing else None,
+        missing,
     )
 
 
-def check_antisymmetric(
-    elements: list[Any],
-    relation: set[tuple[Any, Any]],
-) -> PropertyResult:
-    """Check that opposite pairs imply equal elements."""
+def check_antisymmetric(elements, relation):
+    details = []
+    violations = []
+    checked = set()
 
-    del elements
-
-    details: list[str] = []
-    violations: list[str] = []
-    checked_unordered_pairs: set[frozenset[Any]] = set()
-
-    ordered_pairs = sorted(
-        relation,
-        key=lambda pair: (
-            format_value(pair[0]),
-            format_value(pair[1]),
-        ),
-    )
-
-    for left, right in ordered_pairs:
-        if left == right:
+    for a, b in relation:
+        if a == b:
             continue
 
-        unordered_pair = frozenset({left, right})
+        pair = frozenset((a, b))
 
-        if unordered_pair in checked_unordered_pairs:
+        if pair in checked:
             continue
 
-        checked_unordered_pairs.add(unordered_pair)
+        checked.add(pair)
 
-        forward = format_pair(left, right)
-        reverse = format_pair(right, left)
-
-        if (right, left) in relation:
+        if (b, a) in relation:
             details.append(
-                f"Checked {forward} and {reverse}: "
-                "both are present."
+                f"{format_pair(a,b)} and {format_pair(b,a)} are present."
             )
-
             violations.append(
-                f"{forward} and {reverse}"
+                f"{format_pair(a,b)} and {format_pair(b,a)}"
             )
         else:
             details.append(
-                f"Checked {forward}: the reverse pair "
-                f"{reverse} is not present."
+                f"{format_pair(a,b)} has no reverse pair."
             )
 
-    if violations:
-        return PropertyResult(
-            name="Antisymmetric",
-            passed=False,
-            details=details,
-            failure_reason=(
-                "Opposite pairs with different elements were found: "
-                f"{_summarize(violations)}."
-            ),
-            violations=violations,
-        )
-
     return PropertyResult(
-        name="Antisymmetric",
-        passed=True,
-        details=details or [
-            "There are no distinct off-diagonal pairs to compare."
-        ],
+        "Antisymmetric",
+        not violations,
+        details,
+        "Opposite pairs found: " + ", ".join(violations)
+        if violations else None,
+        violations,
     )
 
 
-def check_transitive(
-    elements: list[Any],
-    relation: set[tuple[Any, Any]],
-) -> PropertyResult:
-    """Check every (a,b),(b,c) chain for the required (a,c)."""
+def check_transitive(elements, relation):
+    details = []
+    violations = []
 
-    del elements
+    for a, b in relation:
+        for x, c in relation:
 
-    details: list[str] = []
-    violations: list[str] = []
-
-    ordered_pairs = sorted(
-        relation,
-        key=lambda pair: (
-            format_value(pair[0]),
-            format_value(pair[1]),
-        ),
-    )
-
-    for first, middle in ordered_pairs:
-        for second_middle, last in ordered_pairs:
-            if middle != second_middle:
+            if b != x:
                 continue
 
-            first_pair = format_pair(first, middle)
-            second_pair = format_pair(middle, last)
-            required_pair = format_pair(first, last)
+            required = format_pair(a, c)
 
-            if (first, last) in relation:
+            if (a, c) in relation:
                 details.append(
-                    f"{first_pair} and {second_pair} → "
-                    f"{required_pair} is present."
+                    f"{format_pair(a,b)} and {format_pair(b,c)} -> "
+                    f"{required} present."
                 )
             else:
                 details.append(
-                    f"{first_pair} and {second_pair} → "
-                    f"{required_pair} is missing."
+                    f"{format_pair(a,b)} and {format_pair(b,c)} -> "
+                    f"{required} missing."
                 )
-
-                violations.append(
-                    f"{first_pair}, {second_pair} "
-                    f"require {required_pair}"
-                )
-
-    if violations:
-        return PropertyResult(
-            name="Transitive",
-            passed=False,
-            details=details,
-            failure_reason=(
-                "Missing shortcut pair(s): "
-                f"{_summarize(violations)}."
-            ),
-            violations=violations,
-        )
+                violations.append(required)
 
     return PropertyResult(
-        name="Transitive",
-        passed=True,
-        details=details or [
-            "There are no composable relation pairs to check."
-        ],
+        "Transitive",
+        not violations,
+        details,
+        "Missing pair(s): " + ", ".join(violations)
+        if violations else None,
+        violations,
     )
 
 
-def check_poset(
-    elements: list[Any],
-    relation: set[tuple[Any, Any]],
-) -> AnalysisResult:
-    """Validate and check reflexivity, antisymmetry, and transitivity."""
+def check_poset(elements, relation):
 
     validate_relation(elements, relation)
 
@@ -250,30 +132,11 @@ def check_poset(
     ]
 
     return AnalysisResult(
-        elements=elements,
-        relation=relation,
-        properties=properties,
+        elements,
+        relation,
+        properties,
     )
 
 
-def analyze_relation(
-    elements: list[Any],
-    relation: set[tuple[Any, Any]],
-) -> AnalysisResult:
-    """Backward-compatible alias for check_poset."""
-
+def analyze_relation(elements, relation):
     return check_poset(elements, relation)
-
-
-__all__ = [
-    "AnalysisResult",
-    "InputError",
-    "PropertyResult",
-    "analyze_relation",
-    "check_antisymmetric",
-    "check_poset",
-    "check_reflexive",
-    "check_transitive",
-    "format_pair",
-    "format_value",
-]
