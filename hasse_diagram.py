@@ -64,7 +64,7 @@ def calculate_hasse_positions(graph):
         center = (len(nodes) - 1) / 2
 
         for i, node in enumerate(nodes):
-            positions[node] = (i - center, rank*0.6)
+            positions[node] = ((i - center)*0.4, rank*0.4)
 
     return positions
 
@@ -79,7 +79,7 @@ def draw_hasse_diagram(graph):
         positions,
         node_color="#E8F1FA",
         edgecolors="#24527A",
-        node_size=800,
+        node_size=600,
         ax=axis,
     )
 
